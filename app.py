@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request
 from gii_keys import mskey, gcvkey, secret
-import json, requests, pprint
+from base64 import b64encode
+from re import sub as replace
+import json, requests, pprint, urllib2
 
 app = Flask(__name__)
 
@@ -26,7 +28,31 @@ def transcribe():
         ms_response = json.loads(msr.content)['description']
         description = ms_response['captions'][0]['text']
         confidence = ms_response['captions'][0]['confidence']
-        return jsonify({'description': description, 'confidence': confidence})
+
+        params = {
+                'key': gcvkey
+                }
+
+        imgreq = urllib2.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        payload = { 'requests': [{
+                        'image': {
+                            'content': b64encode(urllib2.urlopen(imgreq).read())
+                            },
+                        'features': {
+                            'type': 'TEXT_DETECTION',
+                            'maxResults': '200'
+                            }
+                        }
+                    ]
+                }
+        gcr = requests.post('https://vision.googleapis.com/v1/images:annotate', params=params, json=payload)
+        try:
+            gc_response = json.loads(gcr.content)['responses'][0]
+            text = gc_response['textAnnotations'][0]['description']
+            text = replace(r"(\r\n|\n|\r)", " ", text)
+        except KeyError as e:
+            text = ""
+        return jsonify({'description': description, 'confidence': confidence, 'text': text})
     else:
         return "Welcome to the GII transcription API."
 
