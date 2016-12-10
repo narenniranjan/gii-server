@@ -4,9 +4,12 @@ from base64 import b64encode
 from re import sub as replace
 from hashlib import sha1
 from ratelimit import *
+from sys import argv
+from OpenSSL import SSL
 import json, requests, pprint, urllib2, sqlite3
 
 app = Flask(__name__)
+
 
 # This function calls the google OCR API. It's limited to 10 requests a second.
 # It takes in two dicts, one for the URL parameters, and one of the json POST
@@ -111,4 +114,10 @@ def transcribe():
                "s://github.com/narenniranjan/gii-server'>here.</a>"
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    if len(argv) > 1:
+        context = SSL.Context(SSL.SSLv23_METHOD)
+        context.use_privatekey_file(argv[1])
+        context.use_certificate_file(argv[2])
+        app.run(host='0.0.0.0', port='2000', debug=False, ssl_context=context)
+    else:
+        app.run(host='0.0.0.0', port='2000', debug=False)
