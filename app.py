@@ -115,9 +115,7 @@ def transcribe():
 
 if __name__ == "__main__":
     if len(argv) > 1:
-        context = SSL.Context(SSL.SSLv23_METHOD)
-        context.use_privatekey_file(argv[1])
-        context.use_certificate_file(argv[2])
+        context = (argv[2], argv[1])
         app.run(host='0.0.0.0', port='2000', debug=False, ssl_context=context)
     else:
         app.run(host='0.0.0.0', port='2000', debug=False)
