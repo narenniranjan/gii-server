@@ -4,19 +4,22 @@ from base64 import b64encode
 from re import sub as replace
 from hashlib import sha1
 from ratelimit import *
+from sys import argv
+from OpenSSL import SSL
 import json, requests, pprint, urllib2, sqlite3
 from endictionary import *
 
 app = Flask(__name__)
+
 
 # This function calls the google OCR API. It's limited to 10 requests a second.
 # It takes in two dicts, one for the URL parameters, and one of the json POST
 # payload itself. Note that the return can be the empty string if no text
 # is found by Google's API.
 @rate_limited(10)
-def call_google(params, json):
+def call_google(params, payload):
     gcr = requests.post('https://vision.googleapis.com/v1/images:annotate',
-                        params=params, json=json)
+                        params=params, json=payload)
     try:
         gc_response = json.loads(gcr.content)['responses'][0]
         if gc_response['textAnnotations'][0]['locale'] == 'en':
@@ -44,7 +47,7 @@ def call_google(params, json):
 # It takes in three dicts, one for the headers, one for the URL parameters,
 # and one for the json POST payload itself.
 @rate_limited(10)
-def call_microsoft(headers, params, json):
+def call_microsoft(headers, params, payload):
     msr = requests.post('https://api.projectoxford.ai/vision/v1.0/analyze',
                         headers=headers, params=params, json=payload)
     ms_response = json.loads(msr.content)['description']
@@ -61,8 +64,7 @@ def transcribe():
         # Get DB connection and request data
         conn = sqlite3.connect('cache.db')
         c = conn.cursor()
-        requestdictjson = list(request.form)[0]
-        requestdict = json.loads(requestdictjson)
+        requestdict = request.get_json()
         url = requestdict['url']
         # Check secret against the one from disk
         if secret != requestdict['secret']:
@@ -128,4 +130,8 @@ def transcribe():
                "s://github.com/narenniranjan/gii-server'>here.</a>"
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    if len(argv) > 1:
+        context = (argv[2], argv[1])
+        app.run(host='0.0.0.0', port='2000', debug=False, ssl_context=context)
+    else:
+        app.run(host='0.0.0.0', port='2000', debug=False)
