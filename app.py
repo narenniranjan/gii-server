@@ -16,9 +16,9 @@ app = Flask(__name__)
 # payload itself. Note that the return can be the empty string if no text
 # is found by Google's API.
 @rate_limited(10)
-def call_google(params, json):
+def call_google(params, payload):
     gcr = requests.post('https://vision.googleapis.com/v1/images:annotate',
-                        params=params, json=json)
+                        params=params, json=payload)
     try:
         gc_response = json.loads(gcr.content)['responses'][0]
         text = gc_response['textAnnotations'][0]['description']
@@ -31,7 +31,7 @@ def call_google(params, json):
 # It takes in three dicts, one for the headers, one for the URL parameters,
 # and one for the json POST payload itself.
 @rate_limited(10)
-def call_microsoft(headers, params, json):
+def call_microsoft(headers, params, payload):
     msr = requests.post('https://api.projectoxford.ai/vision/v1.0/analyze',
                         headers=headers, params=params, json=payload)
     ms_response = json.loads(msr.content)['description']
@@ -47,8 +47,7 @@ def transcribe():
         # Get DB connection and request data
         conn = sqlite3.connect('cache.db')
         c = conn.cursor()
-        requestdictjson = list(request.form)[0]
-        requestdict = json.loads(requestdictjson)
+        requestdict = request.get_json()
         url = requestdict['url']
         # Check secret against the one from disk
         if secret != requestdict['secret']:
@@ -115,9 +114,7 @@ def transcribe():
 
 if __name__ == "__main__":
     if len(argv) > 1:
-        context = SSL.Context(SSL.SSLv23_METHOD)
-        context.use_privatekey_file(argv[1])
-        context.use_certificate_file(argv[2])
+        context = (argv[2], argv[1])
         app.run(host='0.0.0.0', port='2000', debug=False, ssl_context=context)
     else:
         app.run(host='0.0.0.0', port='2000', debug=False)
