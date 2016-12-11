@@ -53,7 +53,10 @@ def call_microsoft(headers, params, payload):
     ms_response = json.loads(msr.content)['description']
     description = ms_response['captions'][0]['text']
     confidence = ms_response['captions'][0]['confidence']
-    description = "With a confidence level of: " + confidence + " (out of 1), this image is described as " + description
+    if confidence < .15:
+        description = "With a confidence level of: " + str(confidence) + " (out of 1), we have very little confidence in the following description: " + description
+    else:
+        description = "With a confidence level of: " + str(confidence) + " (out of 1), this image is described as " + description
     return description, confidence
 
 # This is the only route for this application, there's really no need for 
