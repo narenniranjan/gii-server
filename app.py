@@ -5,6 +5,7 @@ from re import sub as replace
 from hashlib import sha1
 from ratelimit import *
 import json, requests, pprint, urllib2, sqlite3
+from endictionary import *
 
 app = Flask(__name__)
 
@@ -18,10 +19,25 @@ def call_google(params, json):
                         params=params, json=json)
     try:
         gc_response = json.loads(gcr.content)['responses'][0]
-        text = gc_response['textAnnotations'][0]['description']
-        text = replace(r"(\r\n|\n|\r)", " ", text)
+        if gc_response['textAnnotations'][0]['locale'] == 'en':
+            text = gc_response['textAnnotations'][0]['description']
+            text = replace(r"(\r\n|\n|\r)", " ", text)
+            words = text.split(' ');
+            valid = 0;
+            invalid = 0;
+            for word in words:
+                if word in english:
+                    valid += 1
+                else:
+                    invalid += 1
+            if invalid >= valid:
+                text = "We are not confident in the text transcription of this image. " + "This image contains the text: " + text + ". ";
+            else:
+                text = "This image contains the text: " + text + ". "
+        else:
+            text = "This image contains text in a language our extension cannot understand. "
     except KeyError as e:
-        text = ""
+        text = "There was an error retrieving the text description for this image. "
     return text
 
 # This function calls the Microsoft API, which is limited to 10 requests/sec.
@@ -34,6 +50,7 @@ def call_microsoft(headers, params, json):
     ms_response = json.loads(msr.content)['description']
     description = ms_response['captions'][0]['text']
     confidence = ms_response['captions'][0]['confidence']
+    description = "With a confidence level of: " + confidence + " (out of 1), this image is described as " + description
     return description, confidence
 
 # This is the only route for this application, there's really no need for 
