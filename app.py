@@ -42,7 +42,7 @@ def call_google(params, payload):
         else:
             text = "This image contains text in a language our extension cannot understand. "
     except KeyError as e:
-        text = "There was an error retrieving the text description for this image. "
+        text = ""
     return text
 
 # This function calls the Microsoft API, which is limited to 10 requests/sec.
