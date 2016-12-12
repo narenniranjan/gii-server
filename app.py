@@ -25,6 +25,8 @@ def call_google(params, payload):
         if gc_response['textAnnotations'][0]['locale'] == 'en':
             text = gc_response['textAnnotations'][0]['description']
             text = replace(r"(\r\n|\n|\r)", " ", text)
+            if text == "":
+                return text
             words = text.split(' ');
             valid = 0;
             invalid = 0;
